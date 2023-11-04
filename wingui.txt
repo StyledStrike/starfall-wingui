@@ -1929,7 +1929,7 @@ function Window:OnMouseDrag( x, y )
         self:SetDimensions( self.x, self.y, self.w, h )
     end
 
-    if self.OnResize and self._resizeStartX or self._resizeStartY then
+    if self.OnResize and self._resizeStartX and self._resizeStartY then
         self:OnResize()
     end
 end
