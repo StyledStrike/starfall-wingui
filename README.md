@@ -26,7 +26,7 @@ local WinGUI = require( "wingui.txt" )
 enableHud( nil, true )
 input.enableCursor( true )
 
-local function CreatePanels()
+local function CreateWindow()
     -- create a test window
     local window = WinGUI:Create( "Window" )
     window.w = 300                  -- make it a wider
@@ -60,8 +60,8 @@ hook.add( "drawhud", "", function()
         -- setup the desktop position and size
         WinGUI:ConfigureDesktop( 0, 0, screenW, screenH )
 
-        -- then create our panels
-        CreatePanels()
+        -- then create our window
+        CreateWindow()
     end
 
     WinGUI:Render()
