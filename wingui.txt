@@ -196,7 +196,10 @@ function WinGUI:Create( class, parent )
 
     self.instances[instance._id] = instance
 
-    instance:Setup()
+    if instance.Setup then
+        instance:Setup()
+    end
+
     parent:InvalidateLayout()
 
     return instance
@@ -866,6 +869,50 @@ function Label:SetContentAlignment( alignment, padding )
     self._alignment = alignment
     self._padding = padding or 0
     self:InvalidateLayout()
+end
+
+function Label:PerformLayout()
+    local alignment = self._alignment - 1
+    local alignH = alignment % 3
+    local alignV = Floor( alignment / 3 )
+    local w, h = self.w, self.h
+
+    if alignH == 0 then
+        self._alignX = TEXT_ALIGN.LEFT
+        self._offsetX = self._padding
+
+    elseif alignH == 1 then
+        self._alignX = TEXT_ALIGN.CENTER
+        self._offsetX = w * 0.5
+
+    else
+        self._alignX = TEXT_ALIGN.RIGHT
+        self._offsetX = w - self._padding
+    end
+
+    if alignV == 0 then
+        self._alignY = TEXT_ALIGN.BOTTOM
+        self._offsetY = h - self._padding
+
+    elseif alignV == 1 then
+        self._alignY = TEXT_ALIGN.CENTER
+        self._offsetY = ( h * 0.5 ) - 1
+
+    else
+        self._alignY = TEXT_ALIGN.TOP
+        self._offsetY = self._padding
+    end
+end
+
+function Label:Render( x, y, w, h )
+    if self.backgroundColor then
+        SetColor( self.backgroundColor )
+        DrawRect( x, y, w, h )
+    end
+
+    SetColor( self.textColor )
+    SetFont( self.font )
+    DrawSimpleText( x + self._offsetX, y + self._offsetY, self.text, self._alignX, self._alignY )
 end
 
 -------- Button --------
