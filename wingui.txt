@@ -106,12 +106,6 @@ hook.add( "think", "WinGUI.Update", function()
     end
 end )
 
-hook.add( "inputPressed", "WinGUI.DetectKeys", function( key )
-    if render.isHUDActive() then
-        WinGUI:OnKeyPress( key )
-    end
-end )
-
 hook.add( "mouseWheeled", "WinGUI.DetectMouseWheel", function( delta )
     if render.isHUDActive() then
         WinGUI:OnMouseWheel( delta, WinGUI.mouseX, WinGUI.mouseY )
@@ -303,8 +297,7 @@ do
         end
     end
 
-    local repeatKey
-    local repeatTimer = 0
+    local repeatKey, repeatTimer
 
     function WinGUI:OnKeyPress( key )
         repeatKey = key
@@ -314,6 +307,47 @@ do
             focusedEntry:OnKeyPress( key )
         end
     end
+
+    --- Set if WinGUI should use the chat box for text input.
+    function WinGUI:SetChatInputEnabled( enable )
+        self.useChatInput = enable
+        self:FocusOnEntry( nil )
+
+        repeatKey = nil
+        repeatTimer = 0
+
+        hook.remove( "inputPressed", "WinGUI.DetectKeys" )
+        hook.remove( "StartChat", "WinGUI.DetectChatOpen" )
+        hook.remove( "FinishChat", "WinGUI.DetectChatClose" )
+        hook.remove( "ChatTextChanged", "WinGUI.UpdateText" )
+
+        if input.isControlLocked() then
+            input.lockControls( false )
+        end
+
+        if enable then
+            hook.add( "StartChat", "WinGUI.DetectChatOpen", function()
+                hook.add( "ChatTextChanged", "WinGUI.UpdateText", function( text )
+                    if focusedEntry and focusedEntry.OnKeyPress then
+                        focusedEntry.value = text
+                        focusedEntry._caret = text:len()
+                    end
+                end )
+            end )
+
+            hook.add( "FinishChat", "WinGUI.DetectChatClose", function()
+                hook.remove( "ChatTextChanged", "WinGUI.UpdateText" )
+            end )
+        else
+            hook.add( "inputPressed", "WinGUI.DetectKeys", function( key )
+                if render.isHUDActive() then
+                    WinGUI:OnKeyPress( key )
+                end
+            end )
+        end
+    end
+
+    WinGUI:SetChatInputEnabled( false )
 
     -- Remember the order in which things were drawn.
     -- Used to find out which panel was clicked.
@@ -430,6 +464,9 @@ do
 
         -- update the layout
         UpdateLayout( self.root )
+
+        -- dont deal with input locking/repeat keys while using chat input
+        if self.useChatInput then return end
 
         -- lock/unlock controls when using a entry
         if focusedEntry then
