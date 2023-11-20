@@ -230,10 +230,10 @@ do
     local contextMenu
 
     function WinGUI:CloseContextMenu()
-        if not contextMenu then return end
-
-        contextMenu:Remove()
-        contextMenu = nil
+        if self:IsValid( contextMenu ) then
+            self:Remove( contextMenu )
+            contextMenu = nil
+        end
     end
 
     --- Creates a panel that is automatically removed
@@ -280,7 +280,7 @@ do
 
     --- Set the currently focused text entry panel (or derivatives).
     function WinGUI:FocusOnEntry( panel )
-        if focusedEntry and focusedEntry.OnUnfocus then
+        if self:IsValid( focusedEntry ) and focusedEntry.OnUnfocus then
             focusedEntry:OnUnfocus()
         end
 
@@ -1542,7 +1542,7 @@ function SimpleList:PerformLayout()
     if totalHeight < self.h then
         self._rowWidth = self.w - ml - mr
 
-        if self._vbar then
+        if WinGUI:IsValid( self._vbar ) then
             self._vbar:Remove()
             self._vbar = nil
             self._scroll = 0
@@ -1836,7 +1836,7 @@ end
 
 --- Should this window show a minimize/maximize button?
 function Window:SetMaximizable( maximizable )
-    if self._maximizeButton then
+    if WinGUI:IsValid( self._maximizeButton ) then
         self._maximizeButton:Remove()
         self._maximizeButton = nil
     end
