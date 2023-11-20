@@ -199,6 +199,11 @@ function WinGUI:Create( class, parent )
     return instance
 end
 
+--- Check if a panel is not nil and has not been removed yet.
+function WinGUI:IsValid( panel )
+    return panel ~= nil and self.instances[panel._id] ~= nil
+end
+
 --- Removes a panel instance and its children.
 function WinGUI:Remove( panel )
     local parent = panel._parent
