@@ -18,7 +18,10 @@ local WinGUI = {
     registry = {},
 
     -- List of panel instances by id
-    instances = {}
+    instances = {},
+
+    -- List of panel instances to remove next frame
+    remove = {}
 }
 
 do
@@ -204,33 +207,9 @@ function WinGUI:IsValid( panel )
     return panel ~= nil and self.instances[panel._id] ~= nil
 end
 
---- Removes a panel instance and its children.
+--- Marks a panel instance and its children for removal next frame.
 function WinGUI:Remove( panel )
-    local parent = panel._parent
-
-    -- Make sure the parent knows this panel is gone
-    if parent._children then
-        table.removeByValue( parent._children, panel )
-    end
-
-    local remove = {}
-
-    local function GetPanelAndChildren( p )
-        remove[p] = true
-
-        if not p._children then return end
-
-        for _, child in ipairs( p._children ) do
-            GetPanelAndChildren( child )
-        end
-    end
-
-    GetPanelAndChildren( panel )
-
-    for p, _ in pairs( remove ) do
-        setmetatable( p, nil )
-        self.instances[p._id] = nil
-    end
+    self.remove[panel] = true
 end
 
 local Clamp = math.clamp
@@ -449,9 +428,37 @@ do
 
     --- Updates the mouse, keyboard and panel layouts.
     function WinGUI:Think()
+        for panel, _ in pairs( self.remove ) do
+            local parent = panel._parent
+
+            -- Make sure the parent knows this panel is gone
+            if parent._children then
+                table.removeByValue( parent._children, panel )
+            end
+
+            local remove = {}
+
+            local function GetPanelAndChildren( p )
+                remove[p] = true
+
+                if not p._children then return end
+
+                for _, child in ipairs( p._children ) do
+                    GetPanelAndChildren( child )
+                end
+            end
+
+            GetPanelAndChildren( panel )
+
+            for p, _ in pairs( remove ) do
+                setmetatable( p, nil )
+                self.instances[p._id] = nil
+            end
+        end
+
         self.mouseX, self.mouseY = input.getCursorPos()
 
-        local mouseLeft = input.isMouseDown( MOUSE.LEFT )
+        local mouseLeft = input.getCursorVisible() and input.isMouseDown( MOUSE.LEFT )
 
         if mouseLeft ~= self.mouseLeft then
             self.mouseLeft = mouseLeft
