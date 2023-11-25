@@ -286,8 +286,13 @@ do
 
         focusedEntry = panel
 
-        if panel and panel.OnFocus then
-            panel:OnFocus()
+        if panel then
+            if panel.OnFocus then
+                panel:OnFocus()
+            end
+
+        elseif input.isControlLocked() then
+            input.lockControls( false )
         end
     end
 
@@ -476,14 +481,9 @@ do
         -- dont deal with input locking/repeat keys while using chat input
         if self.useChatInput then return end
 
-        -- lock/unlock controls when using a entry
-        if focusedEntry then
-            if not input.isControlLocked() and input.canLockControls() then
-                input.lockControls( true )
-            end
-
-        elseif input.isControlLocked() then
-            input.lockControls( false )
+        -- lock controls when using a entry
+        if focusedEntry and not input.isControlLocked() and input.canLockControls() then
+            input.lockControls( true )
         end
 
         -- repeat keys that are still being pressed
