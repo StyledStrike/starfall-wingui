@@ -664,7 +664,7 @@ function Panel:GetBoundsFromParent()
     return l, t, r, b
 end
 
---- Set if this panel should be rendered at all.
+--- Set if this panel should be rendered and be clickable.
 function Panel:SetVisible( visible )
     self._visible = visible
 
