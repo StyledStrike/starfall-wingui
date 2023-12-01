@@ -648,8 +648,8 @@ do
         end
     end
 
-    local colorBg = Color( 87, 168, 168, 200 )
-    local colorWhite = Color( 255, 255, 255, 255 )
+    local clearColor = Color( 0, 0, 0, 0 )
+    local textureColor = Color( 255, 255, 255, 255 )
 
     function WinGUI:Render()
         local w, h = render.getResolution()
@@ -661,7 +661,7 @@ do
             self.mouseY = ( ( y or 0 ) / h ) * self.resolutionH
 
             render.selectRenderTarget( "desktop" )
-            render.clear( colorBg )
+            render.clear( clearColor )
             render.resetStencil()
         end
 
@@ -675,7 +675,7 @@ do
         if self.isUsingScreen then
             render.selectRenderTarget()
 
-            render.setColor( colorWhite )
+            render.setColor( textureColor )
             render.setRenderTargetTexture( "desktop" )
             render.drawTexturedRectUVFast( 0, 0, w, h, 0, 0, self.resolutionW / 1024, self.resolutionH / 1024, true )
         end
