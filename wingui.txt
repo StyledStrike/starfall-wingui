@@ -129,6 +129,19 @@ local function IsPanelClickable( p, x, y )
     return x > b[1] and y > b[2] and x < b[3] and y < b[4]
 end
 
+-- Calls OnUnfocus on this panel and on all of its children.
+local function UnfocusPanelAndChildren( p )
+    if p.OnUnfocus then
+        p:OnUnfocus()
+    end
+
+    if p._children then
+        for _, c in ipairs( p._children ) do
+            UnfocusPanelAndChildren( c )
+        end
+    end
+end
+
 --- Set the desktop dimensions.
 function WinGUI:ConfigureDesktop( x, y, w, h )
     self.root.x = math.max( x, 0 )
@@ -384,6 +397,9 @@ do
 
         if not holdingPanel then
             self:CloseContextMenu()
+
+            UnfocusPanelAndChildren( self.root )
+
             return
         end
 
@@ -821,18 +837,6 @@ end
 
 --- Called whenever the panel's layout needs to be updated.
 function Panel:PerformLayout() end
-
-local function UnfocusPanelAndChildren( p )
-    if p.OnUnfocus then
-        p:OnUnfocus()
-    end
-
-    if p._children then
-        for _, c in ipairs( p._children ) do
-            UnfocusPanelAndChildren( c )
-        end
-    end
-end
 
 --- Bring a panel to the end of it's parent's
 --- children list, thus placing it in the front.
