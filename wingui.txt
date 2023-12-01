@@ -110,10 +110,13 @@ hook.add( "think", "WinGUI.Update", function()
 end )
 
 hook.add( "mouseWheeled", "WinGUI.DetectMouseWheel", function( delta )
-    if render.isHUDActive() then
+    if render.isHUDActive() or WinGUI.isUsingScreen then
         WinGUI:OnMouseWheel( delta, WinGUI.mouseX, WinGUI.mouseY )
     end
 end )
+
+local EnableScissor = render.enableScissorRect
+local DisableScissor = render.disableScissorRect
 
 --- A placeholder function that does nothing.
 local function NOOP() end
@@ -139,6 +142,44 @@ local function UnfocusPanelAndChildren( p )
         for _, c in ipairs( p._children ) do
             UnfocusPanelAndChildren( c )
         end
+    end
+end
+
+--- Make WinGUI work on Starfall screens.
+function WinGUI:EnableScreenMode( resolutionW, resolutionH )
+    render.createRenderTarget( "desktop" )
+
+    -- Desktop resolution
+    self.resolutionW = math.clamp( resolutionW or 1024, 256, 1024 )
+    self.resolutionH = math.clamp( resolutionH or 576, 256, 1024 )
+
+    self.isUsingScreen = true
+    self:SetChatInputEnabled( true )
+    self:ConfigureDesktop( 0, 0, self.resolutionW, self.resolutionH )
+
+    local SetStencilEnable = render.setStencilEnable
+
+    DisableScissor = function()
+        SetStencilEnable( false )
+    end
+
+    local ResetStencil = render.resetStencil
+    local SetStencilReferenceValue = render.setStencilReferenceValue
+    local SetStencilCompareFunction = render.setStencilCompareFunction
+    local SetStencilFailOperation = render.setStencilFailOperation
+    local ClearStencilBufferRectangle = render.clearStencilBufferRectangle
+
+    EnableScissor = function( x, y, w, h )
+        ResetStencil()
+        SetStencilEnable( true )
+
+        SetStencilReferenceValue( 1 )
+        SetStencilCompareFunction( 1 )
+        SetStencilFailOperation( STENCIL.REPLACE )
+        ClearStencilBufferRectangle( x, y, w, h, 1 )
+
+        SetStencilCompareFunction( STENCIL.EQUAL )
+        SetStencilFailOperation( STENCIL.KEEP )
     end
 end
 
@@ -323,6 +364,7 @@ do
     --- Set if WinGUI should use the chat box for text input.
     function WinGUI:SetChatInputEnabled( enable )
         self.useChatInput = enable
+        self.isChatOpen = false
         self:FocusOnEntry( nil )
 
         repeatKey = nil
@@ -339,6 +381,8 @@ do
 
         if enable then
             hook.add( "StartChat", "WinGUI.DetectChatOpen", function()
+                self.isChatOpen = true
+
                 hook.add( "ChatTextChanged", "WinGUI.UpdateText", function( text )
                     if focusedEntry and focusedEntry.OnKeyPress then
                         focusedEntry.value = text
@@ -348,6 +392,8 @@ do
             end )
 
             hook.add( "FinishChat", "WinGUI.DetectChatClose", function()
+                self.isChatOpen = false
+
                 hook.remove( "ChatTextChanged", "WinGUI.UpdateText" )
             end )
         else
@@ -473,9 +519,15 @@ do
             self.remove[p] = nil
         end
 
-        self.mouseX, self.mouseY = input.getCursorPos()
+        local mouseLeft
 
-        local mouseLeft = input.getCursorVisible() and input.isMouseDown( MOUSE.LEFT )
+        if self.isUsingScreen then
+            mouseLeft = not self.isChatOpen and input.isKeyDown( KEY.E )
+        else
+            mouseLeft = input.getCursorVisible() and input.isMouseDown( MOUSE.LEFT )
+
+            self.mouseX, self.mouseY = input.getCursorPos()
+        end
 
         if mouseLeft ~= self.mouseLeft then
             self.mouseLeft = mouseLeft
@@ -494,8 +546,8 @@ do
         -- update the layout
         UpdateLayout( self.root )
 
-        -- dont deal with input locking/repeat keys while using chat input
-        if self.useChatInput then return end
+        -- dont deal with input locking/repeat keys while using chat input or a screen
+        if self.useChatInput or self.isUsingScreen then return end
 
         -- lock controls when using a entry
         if focusedEntry and not input.isControlLocked() and input.canLockControls() then
@@ -520,8 +572,6 @@ do
         end
     end
 
-    local EnableScissor = render.enableScissorRect
-    local DisableScissor = render.disableScissorRect
     local stack = {}
 
     --- Pushes a clip to the stack, limiting the
@@ -598,13 +648,37 @@ do
         end
     end
 
+    local colorBg = Color( 87, 168, 168, 200 )
+    local colorWhite = Color( 255, 255, 255, 255 )
+
     function WinGUI:Render()
+        local w, h = render.getResolution()
+
+        if self.isUsingScreen then
+            local x, y = render.cursorPos()
+
+            self.mouseX = ( ( x or 0 ) / w ) * self.resolutionW
+            self.mouseY = ( ( y or 0 ) / h ) * self.resolutionH
+
+            render.selectRenderTarget( "desktop" )
+            render.clear( colorBg )
+            render.resetStencil()
+        end
+
         stack = {}
         drawOrder = {}
         drawCount = 0
 
         RenderPanel( self.root, 0, 0 )
         DisableScissor()
+
+        if self.isUsingScreen then
+            render.selectRenderTarget()
+
+            render.setColor( colorWhite )
+            render.setRenderTargetTexture( "desktop" )
+            render.drawTexturedRectUVFast( 0, 0, w, h, 0, 0, self.resolutionW / 1024, self.resolutionH / 1024, true )
+        end
     end
 end
 
