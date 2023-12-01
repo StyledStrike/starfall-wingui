@@ -291,10 +291,8 @@ do
 
         focusedEntry = panel
 
-        if panel then
-            if panel.OnFocus then
-                panel:OnFocus()
-            end
+        if panel and panel.OnFocus then
+            panel:OnFocus()
         end
     end
 
@@ -1890,6 +1888,14 @@ function Window:Center()
 
     self.x = Floor( ( self._parent.w * 0.5 ) - ( self.w * 0.5 ) )
     self.y = Floor( ( self._parent.h * 0.5 ) - ( self.h * 0.5 ) )
+end
+
+function Window:IsBeingMoved()
+    return self._grabOffsetX ~= nil
+end
+
+function Window:IsBeingResized()
+    return self._resizeStartX ~= nil
 end
 
 function Window:PerformLayout()
