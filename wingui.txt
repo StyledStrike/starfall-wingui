@@ -2018,10 +2018,12 @@ function Window:MakePopup()
 end
 
 function Window:OnFocus()
+    self._focused = true
     self.titleBar.backgroundColor = COLORS.primary
 end
 
 function Window:OnUnfocus()
+    self._focused = false
     self.titleBar.backgroundColor = COLORS.darkGray
 end
 
