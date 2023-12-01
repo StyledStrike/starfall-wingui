@@ -284,15 +284,17 @@ do
             focusedEntry:OnUnfocus()
         end
 
+        -- Only unlock controls if we have a focused panel
+        if focusedEntry and not panel and input.isControlLocked() then
+            input.lockControls( false )
+        end
+
         focusedEntry = panel
 
         if panel then
             if panel.OnFocus then
                 panel:OnFocus()
             end
-
-        elseif input.isControlLocked() then
-            input.lockControls( false )
         end
     end
 
