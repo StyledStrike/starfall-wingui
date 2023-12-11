@@ -1605,6 +1605,8 @@ function SimpleList:SelectLine( index )
 end
 
 function SimpleList:PerformLayout()
+    self.OnMouseWheel = nil
+
     -- margins
     local ml, mt, mr, mb = 0, 0, 0, 0
 
@@ -1635,11 +1637,6 @@ function SimpleList:PerformLayout()
         self._vbar.OnScroll = function( offset )
             self._scroll = -offset
         end
-
-        self.OnMouseWheel = function( _, delta )
-            self._vbar:OnMouseWheel( delta )
-            return true
-        end
     end
 
     local scrollW = self._vbar.w
@@ -1654,6 +1651,14 @@ function SimpleList:PerformLayout()
     if self._selected then
         self._vbar:SetScroll( self._rowHeight * ( self._selected - 1 ) )
     end
+end
+
+function SimpleList:OnMouseWheel( delta )
+    if self._vbar then
+        self._vbar:OnMouseWheel( delta )
+    end
+
+    return true
 end
 
 function SimpleList:Render( x, y, w, h )
