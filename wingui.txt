@@ -342,6 +342,16 @@ do
 
         if focusedEntry and focusedEntry.OnKeyPress then
             focusedEntry:OnKeyPress( key )
+        else
+            local p
+
+            for i = #drawOrder, 1, -1 do
+                p = drawOrder[i]
+
+                if p.OnKeyCodePressed and p:OnKeyCodePressed( key ) then
+                    break
+                end
+            end
         end
     end
 
