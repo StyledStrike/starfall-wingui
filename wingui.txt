@@ -539,14 +539,18 @@ do
         -- Try to make popup the window in the chain
         local parent = holdingPanel._parent
 
-        while parent do
-            if parent._class == "Window" then
-                parent:MakePopup()
-                break
-            end
+        timer.simple( 0, function()
+            if not self:IsValid( parent ) then return end
 
-            parent = parent._parent
-        end
+            while parent do
+                if parent._class == "Window" then
+                    parent:MakePopup()
+                    break
+                end
+
+                parent = parent._parent
+            end
+        end )
     end
 
     --- Handle mouse release events on panels.
