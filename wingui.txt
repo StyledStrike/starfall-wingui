@@ -110,7 +110,7 @@ hook.add( "think", "WinGUI.Update", function()
 end )
 
 hook.add( "mouseWheeled", "WinGUI.DetectMouseWheel", function( delta )
-    if render.isHUDActive() or WinGUI.isUsingScreen then
+    if WinGUI.isUsingScreen or ( render.isHUDActive() and input.getCursorVisible() ) then
         WinGUI:OnMouseWheel( delta, WinGUI.mouseX, WinGUI.mouseY )
     end
 end )
@@ -1094,7 +1094,7 @@ function ProgressBar:Render( x, y, w, h )
     w = ( w - 2 ) * Clamp( self.value, 0, 1 )
 
     SetColor( COLORS.primary )
-    DrawRect( x + 1, y + 2, w, self.h - 3 )
+    DrawRect( x + 1, y + 2, w, h - 3 )
 end
 
 -------- Horizontal Slider --------
