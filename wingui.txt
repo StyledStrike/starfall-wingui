@@ -277,8 +277,6 @@ function WinGUI:Remove( panel )
 end
 
 local Clamp = math.clamp
-local SetColor, DrawRect = render.setColor, render.drawRectFast
-local PushClipping, PopClipping
 
 do
     local contextMenu
@@ -319,18 +317,46 @@ do
 
         return contextMenu
     end
+end
 
-    -- Keeps the box's corners inside two coordinates.
-    local function ClampBounds( l, t, r, b, minX, minY, maxX, maxY )
-        l = Clamp( l, minX, maxX )
-        t = Clamp( t, minY, maxY )
-        r = Clamp( r, minX, maxX )
-        b = Clamp( b, minY, maxY )
+local PushClipping, PopClipping
+local RealTime = timer.realtime
 
-        return l, t, r, b
+do
+    -- Remember the order in which things were drawn.
+    -- Used to find out which panel was clicked.
+    local drawOrder = {}
+
+    -- The panel the cursor is pressing on
+    local holdingPanel
+
+    -- Current text entry we are typing into
+    local focusedEntry
+
+    -- Repeat keys while they are being held down
+    local repeatKey, repeatTimer
+
+    function WinGUI:OnKeyPress( key )
+        repeatKey = key
+        repeatTimer = RealTime() + 0.3
+
+        if focusedEntry and focusedEntry.OnKeyPress then
+            focusedEntry:OnKeyPress( key )
+        end
     end
 
-    local focusedEntry
+    --- Finds the first clickable panel under a certain position.
+    function WinGUI:GetPanelAt( x, y )
+        local p
+
+        for i = #drawOrder, 1, -1 do
+            p = drawOrder[i]
+
+            if IsPanelClickable( p, x, y ) then
+                return p
+            end
+        end
+    end
 
     --- Set the currently focused text entry panel (or derivatives).
     function WinGUI:FocusOnEntry( panel )
@@ -347,17 +373,6 @@ do
 
         if panel and panel.OnFocus then
             panel:OnFocus()
-        end
-    end
-
-    local repeatKey, repeatTimer
-
-    function WinGUI:OnKeyPress( key )
-        repeatKey = key
-        repeatTimer = timer.realtime() + 0.3
-
-        if focusedEntry and focusedEntry.OnKeyPress then
-            focusedEntry:OnKeyPress( key )
         end
     end
 
@@ -406,85 +421,6 @@ do
     end
 
     WinGUI:SetChatInputEnabled( false )
-
-    -- Remember the order in which things were drawn.
-    -- Used to find out which panel was clicked.
-    local drawOrder = {}
-
-    --- Finds the first clickable panel under a certain position.
-    function WinGUI:GetPanelAt( x, y )
-        local p
-
-        for i = #drawOrder, 1, -1 do
-            p = drawOrder[i]
-
-            if IsPanelClickable( p, x, y ) then
-                return p
-            end
-        end
-    end
-
-    local holdingPanel
-
-    --- Handle mouse press events on panels.
-    function WinGUI:MousePress( x, y )
-        self:FocusOnEntry()
-
-        local p
-
-        for i = #drawOrder, 1, -1 do
-            p = drawOrder[i]
-
-            if p.OnMousePress and IsPanelClickable( p, x, y ) and p:OnMousePress( x, y ) then
-                holdingPanel = p
-                break
-            end
-        end
-
-        if not holdingPanel then
-            self:CloseContextMenu()
-
-            UnfocusPanelAndChildren( self.root )
-
-            return
-        end
-
-        -- Try to make popup the window in the chain
-        local parent = holdingPanel._parent
-
-        while parent do
-            if parent._class == "Window" then
-                parent:MakePopup()
-                break
-            end
-
-            parent = parent._parent
-        end
-    end
-
-    --- Handle mouse release events on panels.
-    function WinGUI:MouseRelease()
-        if not holdingPanel then return end
-
-        if holdingPanel.OnMouseRelease then
-            holdingPanel:OnMouseRelease()
-        end
-
-        holdingPanel = nil
-    end
-
-    --- Handle mouse wheel events on panels.
-    function WinGUI:OnMouseWheel( delta, x, y )
-        local p
-
-        for i = #drawOrder, 1, -1 do
-            p = drawOrder[i]
-
-            if p.OnMouseWheel and IsPanelClickable( p, x, y ) and p:OnMouseWheel( delta ) then
-                break
-            end
-        end
-    end
 
     --- Recursively update the layout of this panel and its children.
     local function UpdateLayout( p )
@@ -557,7 +493,7 @@ do
         -- repeat keys that are still being pressed
         if not repeatKey then return end
 
-        local t = timer.realtime()
+        local t = RealTime()
 
         if t > repeatTimer then
             if input.isKeyDown( repeatKey ) then
@@ -570,6 +506,76 @@ do
                 repeatKey = nil
             end
         end
+    end
+
+    --- Handle mouse press events on panels.
+    function WinGUI:MousePress( x, y )
+        self:FocusOnEntry()
+
+        local p
+
+        for i = #drawOrder, 1, -1 do
+            p = drawOrder[i]
+
+            if p.OnMousePress and IsPanelClickable( p, x, y ) and p:OnMousePress( x, y ) then
+                holdingPanel = p
+                break
+            end
+        end
+
+        if not holdingPanel then
+            self:CloseContextMenu()
+
+            UnfocusPanelAndChildren( self.root )
+
+            return
+        end
+
+        -- Try to make popup the window in the chain
+        local parent = holdingPanel._parent
+
+        while parent do
+            if parent._class == "Window" then
+                parent:MakePopup()
+                break
+            end
+
+            parent = parent._parent
+        end
+    end
+
+    --- Handle mouse release events on panels.
+    function WinGUI:MouseRelease()
+        if not holdingPanel then return end
+
+        if holdingPanel.OnMouseRelease then
+            holdingPanel:OnMouseRelease()
+        end
+
+        holdingPanel = nil
+    end
+
+    --- Handle mouse wheel events on panels.
+    function WinGUI:OnMouseWheel( delta, x, y )
+        local p
+
+        for i = #drawOrder, 1, -1 do
+            p = drawOrder[i]
+
+            if p.OnMouseWheel and IsPanelClickable( p, x, y ) and p:OnMouseWheel( delta ) then
+                break
+            end
+        end
+    end
+
+    -- Keeps the box's corners inside two coordinates.
+    local function ClampBounds( l, t, r, b, minX, minY, maxX, maxY )
+        l = Clamp( l, minX, maxX )
+        t = Clamp( t, minY, maxY )
+        r = Clamp( r, minX, maxX )
+        b = Clamp( b, minY, maxY )
+
+        return l, t, r, b
     end
 
     local stack = {}
@@ -682,11 +688,13 @@ do
     end
 end
 
--------- Base Panel --------
-
 local Max = math.max
 local Floor = math.floor
+
 local GetTextSize = render.getTextSize
+local SetColor, DrawRect = render.setColor, render.drawRectFast
+
+-------- Base Panel --------
 
 local Panel = WinGUI:Register( "Panel" )
 
@@ -727,6 +735,15 @@ function Panel:Clear()
     self:InvalidateLayout()
 end
 
+--- Set if this panel should be rendered and be clickable.
+function Panel:SetVisible( visible )
+    self._visible = visible
+
+    if visible then
+        self:InvalidateLayout()
+    end
+end
+
 --- Marks this panel and its children with a invalid layout flag.
 function Panel:InvalidateLayout()
     self._isLayoutInvalid = true
@@ -752,15 +769,6 @@ function Panel:GetBoundsFromParent()
     end
 
     return l, t, r, b
-end
-
---- Set if this panel should be rendered and be clickable.
-function Panel:SetVisible( visible )
-    self._visible = visible
-
-    if visible then
-        self:InvalidateLayout()
-    end
 end
 
 --- Set this panel's position and size.
@@ -1268,14 +1276,6 @@ function ComboBox:PerformLayout()
     self.downButton.h = self.h - 4
 end
 
-function ComboBox:Render( x, y, w, h )
-    Panel.RenderInput( self, x, y, w, h, self.backgroundColor )
-
-    SetFont( self.font )
-    SetColor( self._text and self.textColor or COLORS.darkGray )
-    DrawSimpleText( x + 4, y + h * 0.5, self._text or self.placeholder, TEXT_ALIGN.LEFT, TEXT_ALIGN.CENTER )
-end
-
 function ComboBox:OnMousePress()
     local x, y = self:GetAbsolutePos()
     local menu = WinGUI:OpenContextMenu( x, y + self.h, math.min( self.w, 400 ), 100 )
@@ -1294,6 +1294,14 @@ function ComboBox:OnMousePress()
     end
 
     return true
+end
+
+function ComboBox:Render( x, y, w, h )
+    Panel.RenderInput( self, x, y, w, h, self.backgroundColor )
+
+    SetFont( self.font )
+    SetColor( self._text and self.textColor or COLORS.darkGray )
+    DrawSimpleText( x + 4, y + h * 0.5, self._text or self.placeholder, TEXT_ALIGN.LEFT, TEXT_ALIGN.CENTER )
 end
 
 -------- Vertical Scroll Bar --------
@@ -1787,6 +1795,22 @@ function PropertySheet:CloseTabByPanel( panel )
     end
 end
 
+function PropertySheet:OnMousePress( x, y )
+    local lx, ly = self:ScreenToLocal( x, y )
+    if ly > 21 then return end
+
+    local tabX = 0
+
+    for i, tab in ipairs( self._tabs ) do
+        tabX = tabX + tab.w
+
+        if lx < tabX then
+            self:SelectTabByIndex( i )
+            break
+        end
+    end
+end
+
 local function DrawTab( label, x, y, w, h, isSelected )
     y = isSelected and y or y + 2
     h = isSelected and h or h - 2
@@ -1841,22 +1865,6 @@ function PropertySheet:Render( x, y, w, h )
 
     SetColor( COLORS.lightGray )
     DrawRect( x + 1, y, w - 3, h - 2 )
-end
-
-function PropertySheet:OnMousePress( x, y )
-    local lx, ly = self:ScreenToLocal( x, y )
-    if ly > 21 then return end
-
-    local tabX = 0
-
-    for i, tab in ipairs( self._tabs ) do
-        tabX = tabX + tab.w
-
-        if lx < tabX then
-            self:SelectTabByIndex( i )
-            break
-        end
-    end
 end
 
 -------- Window --------
@@ -2276,7 +2284,7 @@ function TextEntry:Render( x, y, w, h )
         self._offset = Max( self._offset - math.abs( caretX ), 0 )
     end
 
-    if timer.realtime() % 1 > 0.5 then
+    if RealTime() % 1 > 0.5 then
         SetColor( COLORS.black )
         DrawRect( x + caretX, y + 6, 1, 12 )
     end
