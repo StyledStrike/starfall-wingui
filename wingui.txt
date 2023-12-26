@@ -1617,8 +1617,6 @@ function SimpleList:SelectLine( index )
 end
 
 function SimpleList:PerformLayout()
-    self.OnMouseWheel = nil
-
     -- margins
     local ml, mt, mr, mb = 0, 0, 0, 0
 
