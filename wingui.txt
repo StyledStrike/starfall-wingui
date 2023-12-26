@@ -304,16 +304,11 @@ do
 
         contextMenu = self:Create( "Panel" )
         contextMenu:SetDimensions( x, y, w, h )
+        contextMenu:MakePopup( false )
 
-        timer.simple( 0, function()
-            if not contextMenu then return end
-
-            contextMenu:MakePopup( false )
-
-            contextMenu.OnUnfocus = function()
-                self:CloseContextMenu()
-            end
-        end )
+        contextMenu.OnUnfocus = function()
+            self:CloseContextMenu()
+        end
 
         return contextMenu
     end
