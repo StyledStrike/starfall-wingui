@@ -2112,6 +2112,8 @@ end
 
 --- Bring a window to the front.
 function Window:MakePopup()
+    if self._focused then return end
+
     Panel.MakePopup( self, true )
 
     self:OnFocus()
