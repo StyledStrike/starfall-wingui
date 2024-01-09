@@ -1652,7 +1652,7 @@ function SimpleList:PerformLayout()
     local scrollW = self._vbar.w
 
     self._rowWidth = self.w - scrollW - ml - mr
-    self._vbar.x = self.w - scrollW
+    self._vbar.x = self.w - scrollW - 1
     self._vbar.y = 2
     self._vbar.h = self.h - 3
 
@@ -1672,7 +1672,7 @@ function SimpleList:OnMouseWheel( delta )
 end
 
 function SimpleList:Render( x, y, w, h )
-    Panel.RenderInput( self, x, y, w + 1, h )
+    Panel.RenderInput( self, x, y, w, h )
 
     PushClipping( x + 2, y + 2, w - 2, h - 4 )
     SetFont( FONTS.text )
