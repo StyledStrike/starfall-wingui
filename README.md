@@ -16,7 +16,6 @@ You can find a list of all panel classes and their properties on [the wiki page]
 
 ```lua
 --@name WinGUI Quick Start
---@author StyledStrike
 --@client
 --@owneronly
 
@@ -49,7 +48,7 @@ local function CreateWindow()
     end
 end
 
--- we'll need the screen resolution
+-- we'll need the game screen resolution
 -- before we can create a window
 local screenW, screenH
 
@@ -57,13 +56,59 @@ hook.add( "drawhud", "", function()
     if not screenW then
         screenW, screenH = render.getGameResolution()
 
-        -- setup the desktop position and size
+        -- setup the desktop position and size on your HUD
         WinGUI:ConfigureDesktop( 0, 0, screenW, screenH )
 
         -- then create our window
         CreateWindow()
     end
 
+    WinGUI:Render()
+end )
+```
+
+## Starfall Screen Example
+
+If you want to use WinGUI on regular Starfall screens instead of your HUD, you can use [WinGUI:EnableScreenMode](https://github.com/StyledStrike/starfall-wingui/wiki/WinGUI#winguienablescreenmode) like this:
+
+```lua
+--@name WinGUI Screen Example
+--@client
+
+--@include wingui.txt
+local WinGUI = require( "wingui.txt" )
+
+-- Makes so WinGUI can work on Starfall screens. Please note that
+-- this will force you to use chat for text input, and
+-- it persists until the chip is removed.
+WinGUI:EnableScreenMode()
+
+-- Since WinGUI already knows the desktop resolution,
+-- you dont have to get the game resolution before
+-- creating panels (like on the HUD example).
+
+-- create a test window
+local window = WinGUI:Create( "Window" )
+window.w = 300                  -- make it a wider
+window.h = 200                  -- make it a taller
+window:SetTitle( "My Window" )  -- set the text shown in the title bar
+window:Center()                 -- put the window in the middle of the screen
+window:MakePopup()              -- focus on this window
+
+-- add a test button to the window
+local button = WinGUI:Create( "Button", window )
+button.text = "Click me!"
+
+-- make the button fill the window's width
+-- and pinned to the top
+button:Dock( WinGUI.DOCK.TOP )
+
+-- listen to click events
+button.OnClick = function()
+    print( "I was clicked!" )
+end
+
+hook.add( "render", "", function()
     WinGUI:Render()
 end )
 ```
